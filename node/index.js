@@ -16,44 +16,35 @@ app.use(bodyParser.json()); // for parsing application/json
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, './temp');
-  },
+  destination: function (req, file, cb) { cb(null, './temp'); },
   filename: function (req, file, cb) {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     cb(null, `${file.fieldname}-${uniqueSuffix}`);
   }
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage, limits: {
+  fileSize: process.env.MAX_SIZE || 10 * 10 * 1024 // 10MB
+} });
 
-app.post('/upload', upload.single('video_file'), function (req, res, next) {
+app.post('/upload', upload.single('video_file'), async function (req, res) {
   console.log(req.file)
-
+  const name = req.file.originalname.replace(/\s/ig, '_')
+  const saveTo = path.join(process.cwd(), 'extracts', name);
   try {
-    var process = new ffmpeg(req.file.path);
-    process.then(function (video) {
-      // Callback mode
-      video.fnExtractFrameToJPG('./temp', {
+    var proc = new ffmpeg(req.file.path);
+    return proc.then(video => video.fnExtractFrameToJPG(saveTo, {
         every_n_seconds: 2,
         number : 5,
-        file_name : 'my_frame_%t_%s'
-      }, function (error, files) {
-        error
-          ? console.error(error)
-          : console.log('Frames: ' + files);
-      });
-    }, function (err) {
-      console.log('Error: ' + err);
-    });
-  } catch (e) {
-    console.log(e.code);
-    console.log(e.msg);
-  }
-
+        file_name : `${name}_%t_%s`
+      }))
+    .then(files => files.map(n => n.replace(saveTo, `http://localhost:3000/out/${name}`)))
+    .then(files => { res.json(files) })
+  } catch (e) { console.error(e); }
 });
 
 app.get('/', express.static(path.join(__dirname, 'public')));
+app.get('/out', express.static(path.join(__dirname, 'exports')));
 
 app.listen(process.env.PORT || 3000, function () {
   console.log('server is ready', process.env.PORT || 3000);
