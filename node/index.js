@@ -38,7 +38,7 @@ app.post('/upload', upload.single('video_file'), async function (req, res) {
         number : 5,
         file_name : `${name}_%t_%s`
       }))
-    .then(files => files.map(n => n.replace(saveTo, `http://localhost:3000/out/${name}`)))
+    .then(files => files.map(n => n.replace(saveTo, `/out/${name}`)))
     .then(files => { res.json(files) })
   } catch (e) { console.error(e); }
 });
