@@ -21,8 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Move to app directory
+        run: cd node
+
       - name: Build image
-        run: docker build . --file node/Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+        run: cd node && docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
       - name: Log in to registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
